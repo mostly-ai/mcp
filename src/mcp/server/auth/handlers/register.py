@@ -83,6 +83,10 @@ class RegistrationHandler:
                     ),
                     status_code=400,
                 )
+        # ignore unsupported grant types (e.g., `urn:ietf:params:oauth:grant-type:device_code` requested by VS Code)
+        allowed_grant_types = {"authorization_code", "refresh_token"}
+        client_metadata.grant_types = list(filter(lambda x: x in allowed_grant_types, client_metadata.grant_types))
+
         if set(client_metadata.grant_types) != {"authorization_code", "refresh_token"}:
             return PydanticJSONResponse(
                 content=RegistrationErrorResponse(
