@@ -18,7 +18,7 @@ REDIRECT_URIS_TO_CLIENT_ID: dict[str, str] = {
     "https://claude.ai/api/mcp/auth_callback": "claude",
     "http://localhost:6274/oauth/callback/debug": "mcp-inspector-debug",
     "http://localhost:6274/oauth/callback": "mcp-inspector",
-    "https://insiders.vscode.dev/redirect": "vscode",  # TODO: doesn't work on VS Code yet
+    "https://insiders.vscode.dev/redirect": "vscode",
 }
 
 class RegistrationRequest(RootModel[OAuthClientMetadata]):
