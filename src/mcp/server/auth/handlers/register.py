@@ -19,6 +19,8 @@ REDIRECT_URIS_TO_CLIENT_ID: dict[str, str] = {
     "http://localhost:6274/oauth/callback/debug": "mcp-inspector-debug",
     "http://localhost:6274/oauth/callback": "mcp-inspector",
     "https://insiders.vscode.dev/redirect": "vscode",
+    # NOTE: currently, users must name the server as `mostlyai` in Cursor's MCP config, so that it will use this redirect URI
+    "cursor://anysphere.cursor-retrieval/oauth/user-mostlyai/callback": "cursor",
 }
 
 class RegistrationRequest(RootModel[OAuthClientMetadata]):
