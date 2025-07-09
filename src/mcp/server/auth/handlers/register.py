@@ -14,6 +14,14 @@ from mcp.server.auth.provider import OAuthAuthorizationServerProvider, Registrat
 from mcp.server.auth.settings import ClientRegistrationOptions
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata
 
+REDIRECT_URIS_TO_CLIENT_ID: dict[str, str] = {
+    "https://claude.ai/api/mcp/auth_callback": "claude",
+    "http://localhost:6274/oauth/callback/debug": "mcp-inspector-debug",
+    "http://localhost:6274/oauth/callback": "mcp-inspector",
+    "https://insiders.vscode.dev/redirect": "vscode",
+    # NOTE: currently, users must name the server as `mostlyai` in Cursor's MCP config, so that it will use this redirect URI
+    "cursor://anysphere.cursor-retrieval/oauth/user-mostlyai/callback": "cursor",
+}
 
 class RegistrationRequest(RootModel[OAuthClientMetadata]):
     # this wrapper is a no-op; it's just to separate out the types exposed to the
@@ -36,6 +44,7 @@ class RegistrationHandler:
         try:
             # Parse request body as JSON
             body = await request.json()
+            print(f"Request for registration: {body = }")
             client_metadata = OAuthClientMetadata.model_validate(body)
 
             # Scope validation is handled below
@@ -48,7 +57,15 @@ class RegistrationHandler:
                 status_code=400,
             )
 
-        client_id = str(uuid4())
+        # Check if the redirect URI is in the trusted list
+        # If yes, use the predefined client ID, otherwise generate a new one
+        redirect_uris = [uri.unicode_string() for uri in client_metadata.redirect_uris]
+        for redirect_uri, predefined_client_id in REDIRECT_URIS_TO_CLIENT_ID.items():
+            if redirect_uri in redirect_uris:
+                client_id = predefined_client_id
+                break
+        else:
+            client_id = str(uuid4())
         client_secret = None
         if client_metadata.token_endpoint_auth_method != "none":
             # cryptographically secure random 32-byte hex string
@@ -68,6 +85,10 @@ class RegistrationHandler:
                     ),
                     status_code=400,
                 )
+        # ignore unsupported grant types (e.g., `urn:ietf:params:oauth:grant-type:device_code` requested by VS Code)
+        allowed_grant_types = {"authorization_code", "refresh_token"}
+        client_metadata.grant_types = list(filter(lambda x: x in allowed_grant_types, client_metadata.grant_types))
+
         if set(client_metadata.grant_types) != {"authorization_code", "refresh_token"}:
             return PydanticJSONResponse(
                 content=RegistrationErrorResponse(
